@@ -1,0 +1,77 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url = env("DATABASE_URL")
+}
+
+model User {
+  id         Int      @id @default(autoincrement())
+  email      String   @unique
+  name       String
+  password   String
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  sessions   UploadSession[]
+
+  @@map("users")
+}
+
+model UploadSession {
+  id         Int      @id @default(autoincrement())
+  userId     Int?     @map("user_id") // null = guest
+  token      String   @unique
+  status     SessionStatus @default(DRAFT)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user       User?    @relation(fields: [userId], references: [id])
+  cvs        CVFile[]
+  job        JobDescriptionFile?
+
+  @@map("upload_sessions")
+}
+
+model CVFile {
+  id         Int      @id @default(autoincrement())
+  fileName   String   @map("file_name")
+  filePath   String   @map("file_path")
+  fileType   FileType @map("file_type")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  sessionId  Int      @map("session_id")
+  session    UploadSession @relation(fields: [sessionId], references: [id])
+
+  @@map("cv_files")
+}
+
+model JobDescriptionFile {
+  id         Int      @id @default(autoincrement())
+  content    String?  @db.Text
+  fileName   String?  @map("file_name")
+  filePath   String?  @map("file_path")
+  fileType   FileType? @map("file_type")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  sessionId  Int      @unique @map("session_id")
+  session    UploadSession @relation(fields: [sessionId], references: [id])
+
+  @@map("job_description_files")
+}
+
+enum FileType {
+  pdf
+  doc
+  docx
+}
+
+enum SessionStatus {
+  DRAFT
+  PROCESSED
+}
